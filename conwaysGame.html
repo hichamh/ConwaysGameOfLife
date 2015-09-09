@@ -1,0 +1,244 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+	<title>Conway game</title>
+	<style>
+		body {
+			margin: 0;
+			padding: 0;
+			background-color: #000000;
+		}
+		#start
+		{
+			position: absolute;
+			top: 10px;
+			left: 10px;
+		}
+		#frameT
+		{
+		position:absolute;
+		top: 10px;
+		left: 100px;
+		width:30px;
+		}
+	</style>
+	
+	<script src="pixi.dev.js"></script>
+	
+</head>
+<body>
+	<button id="start" > Start </button>
+	<input id="frameT" type="text" value=30></input>
+	<script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+	<script>
+	
+	// create an new instance of a pixi stage
+	var stage = new PIXI.Stage(0xFFFFFF, true);
+	var cellWidth = 10;
+	colors = [0xFF3300,0x0000FF];
+	var count = 0;
+	var play = false;
+	var timeStep = 3;
+	stage.setInteractive(true);
+	
+	var renderer = PIXI.autoDetectRenderer( window.innerWidth, window.innerHeight);
+	renderer.view.style.width = window.innerWidth + "px";
+	renderer.view.style.height = window.innerHeight + "px";
+	renderer.view.style.display = "block";
+	 
+	// add render view to DOM
+	document.body.appendChild(renderer.view);
+	
+	function createSquare(colorInner,colorOuter,width,skinWidth,positionX,positionY,addToStage)
+	{
+		var graphics = new PIXI.Graphics();
+
+		// set a fill and line style
+		graphics.beginFill(colorInner);
+		// draw a rectangle
+		graphics.lineStyle(skinWidth, colorOuter, 1);
+		graphics.drawRect(positionX, positionY, width-skinWidth, width-skinWidth);
+		graphics.endFill();
+		if(addToStage)
+		stage.addChild(graphics);
+		return graphics;
+	}
+	
+	
+	var map = new Array((window.innerWidth - window.innerWidth%10)/cellWidth);
+	
+	for(var x=0; x < map.length ; x++)
+	{
+		map[x] = new Array((window.innerHeight - window.innerHeight%10)/cellWidth);
+		for(var y=0; y < map[x].length; y++)
+		{
+			map[x][y] = {};
+			map[x][y].square = {};
+			map[x][y].dead = true;
+		}
+	}
+	//here 2d map initilized;
+	
+	
+	
+	
+
+	// a click on the stage creates a cell
+	stage.click = stage.tap = function()
+	{
+		x = stage.getMousePosition().x;
+		x = x - x%10;
+		y = stage.getMousePosition().y;
+		y = y - y%10;
+		square = createSquare(colors[0],colors[1],cellWidth,2,x,y,true);
+		var cell = {};
+		cell.square = square;
+		cell.dead = false;
+		map[x/cellWidth][y/cellWidth] = cell;
+		
+		
+		count++;
+		console.log(count);
+		
+		
+	
+	}
+	
+	
+	// run the render loop
+	
+	var lastFrameTimer = 0;
+	var timeInit = new Date().getTime();
+	var update = setInterval(Update, timeStep);
+	function revive(x,y)
+	{
+		map[x][y].square = createSquare(colors[0],colors[1],cellWidth,2,x*cellWidth,y*cellWidth,true);
+		stage.addChild(map[x][y].square);
+		map[x][y].dead = false;
+		count++;
+		console.log(count);		
+	}
+	function kill(x , y)
+	{
+		stage.removeChild(map[x][y].square);
+		map[x][y].dead = true;
+		map[x][y].square = null;
+		count--;
+	}
+	function Update() 
+	{	
+	 console.log(timeStep);
+	 if(play)
+	 {
+		var toKill = new Array();
+		var toRevive = new Array();
+		for (var x=0; x < map.length ; x++)
+		{
+			
+			for(var y=0; y < map[x].length ; y++)
+			{
+			 
+				var neighbors = 0;
+				if(map[x][y-1] != undefined )
+				{
+					if( !map[x][y-1].dead)
+					neighbors++;
+				}
+				if(map[x][y+1] != undefined) 
+				{
+					if (!map[x][y+1].dead)
+					neighbors++;
+				}
+				if(map[x-1] != undefined)
+				{
+					if(map[x-1][y] != undefined)
+					{
+						if (!map[x-1][y].dead)
+							neighbors++;
+					}
+				}
+				if(map[x+1] != undefined)
+				{
+					if(map[x+1][y] != undefined)
+					{
+						if(!map[x+1][y].dead)
+							neighbors++;
+					}
+				}
+				if(map[x+1] != undefined)
+				{
+					if(map[x+1][y+1] != undefined)
+					{
+						if(!map[x+1][y+1].dead)
+							neighbors++;
+					}
+					if(map[x+1][y-1] != undefined)
+					{
+						if(!map[x+1][y-1].dead)
+							neighbors++;
+					}
+				}
+				if(map[x-1] != undefined)
+				{
+					if(map[x-1][y+1] != undefined)
+					{
+						if(!map[x-1][y+1].dead)
+							neighbors++;
+					}
+					if(map[x-1][y-1] != undefined)
+					{
+						if(!map[x-1][y-1].dead)
+							neighbors++;
+					}
+				}
+			 
+			 if(!map[x][y].dead)
+			 {
+				console.log("map("+x+","+y+")= "+neighbors);
+				if(neighbors<2 || neighbors > 3)
+				  toKill.push({x:x,y:y});
+				console.log(count);
+			 }
+			 else if( neighbors == 3 )//|| neighbors == 7)
+			 {
+			  	toRevive.push({x:x,y:y});				
+			 }
+				
+			}
+		}
+		for(var i=0;i<toKill.length;i++)
+		{
+		  kill(toKill[i].x,toKill[i].y);
+		}
+		for(var i=0;i<toRevive.length;i++)
+		{
+		  revive(toRevive[i].x,toRevive[i].y);
+		}
+			
+	 }
+	    renderer.render(stage);
+	}
+
+	$("#start").click(function()
+	{
+	 if(play)
+	 {
+		play = false;
+	 	$("#start").html() = "start";
+	 }
+	 else
+	 {
+		play = true;
+		$("#start").html() = "pause";
+	 }
+	});
+	$("#frameT").change(function()
+	{
+	timeStep = $("#frameT").val();
+	clearInterval(update);
+	update = setInterval(Update, timeStep);
+	});
+	</script>
+
+	</body>
+</html>
